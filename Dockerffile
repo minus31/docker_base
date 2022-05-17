@@ -1,0 +1,36 @@
+FROM pytorch/pytorch:1.11.0-cuda11.3-cudnn8-runtime
+
+ENV LANG=C.UTF-8
+ENV TZ=Asia/Seoul
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Libraries
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tzdata g++ git curl wget vim libgl1-mesa-glx libglib2.0-0 libsm6 libxrender1 libxext6
+
+# make workspace
+COPY . /torch_serve_example
+WORKDIR /torch_serve_example
+
+# somehow share requirments.txt 
+RUN pip install -U pip 
+RUN pip install -r requirements.txt
+
+RUN pre-commit install
+
+#jupyter setting
+# RUN jupyter notebook --generate-config
+# RUN chown -R root:root /root/.jupyter && chmod -R 755 /root/.jupyter
+# RUN echo "c.NotebookApp.ip = '0.0.0.0'" | tee -a /root/.jupyter/jupyter_notebook_config.py 
+# RUN echo "c.NotebookApp.token = u\"\"" | tee -a /root/.jupyter/jupyter_notebook_config.py 
+# RUN echo "c.NotebookApp.password = u''" | tee -a /root/.jupyter/jupyter_notebook_config.py
+# RUN echo "c.NotebookApp.iopub_data_rate_limit = 10000000" | tee -a /root/.jupyter/jupyter_notebook_config.py
+# RUN echo "c.NotebookApp.open_browser = False" | tee -a /root/.jupyter/jupyter_notebook_config.py
+
+## torchserve dependency
+RUN git clone https://github.com/pytorch/serve.git && cd serve && python ./ts_scripts/install_dependencies.py --cuda=cu113 && cd ../ && rm -rf serve/
+
+EXPOSE 8080 8081 8082 7070 7071
+
+CMD ["bash"]
+# CMD ["torchserve",  "--start", "--model-store", "model_store" "--models", "densenet=densenet161.mar" "--ts-config", "config.properties"]
