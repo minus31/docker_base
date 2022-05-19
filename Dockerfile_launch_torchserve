@@ -1,0 +1,40 @@
+FROM pytorch/pytorch:1.11.0-cuda11.3-cudnn8-runtime
+
+ENV LANG=C.UTF-8
+ENV TZ=Asia/Seoul
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Libraries
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tzdata g++ git curl wget vim libgl1-mesa-glx libglib2.0-0 libsm6 libxrender1 libxext6
+
+# make workspace
+COPY . /torch_serve_example
+WORKDIR /torch_serve_example
+
+# ENV PATH="/opt/conda/bin:$PATH:/torch_serve_example"
+# RUN useradd -m docker_user
+# RUN chmod +x /torch_serve_example/serve_entrypoint.sh
+# RUN chown -R docker_user /torch_serve_example
+
+# USER docker_user 
+
+## torchserve dependency
+RUN git clone https://github.com/pytorch/serve.git && cd serve && python ./ts_scripts/install_dependencies.py --cuda=cu113 && cd ../ && rm -rf serve/
+# RUN git clone https://github.com/pytorch/serve.git && python ./serve/ts_scripts/install_dependencies.py && rm -rf serve/
+
+
+# somehow share requirments.txt 
+RUN pip install -U pip  && pip install -r requirements.txt
+
+# pre-commit init 
+RUN pre-commit install
+
+EXPOSE 8080 8081 8082 7070 7071
+
+# CMD ["bash"]
+# ENTRYPOINT ["/torch_serve_example/serve_entrypoint.sh"]
+# CMD ["serve"]
+# CMD torchserve --start --model-store model_store --models densenet=densenet161.mar --ts-config config.properties && tail -f /dev/null
+# CMD ["torchserve --start --model-store model_store --models densenet=densenet161.mar --ts-config config.properties"]
+# CMD ["torchserve", "--start", "--model-store", "model_store" "--models", "densenet=densenet161.mar" "--ts-config", "config.properties"]s
