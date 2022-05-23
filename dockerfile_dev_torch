@@ -1,7 +1,5 @@
 FROM nvidia/cuda:11.3.1-devel-ubuntu20.04
 
-RUN mkdir -p /home/Spellbook/pose_from_image
-
 RUN sed -i 's@archive.ubuntu.com@mirror.kakao.com@g' /etc/apt/sources.list
 RUN sed -i 's@security.ubuntu.com@mirror.kakao.com@g' /etc/apt/sources.list
 
@@ -24,7 +22,7 @@ RUN pip3 install jupyter
 RUN mkdir -p /root/.jupyter
 WORKDIR /root/.jupyter
 RUN jupyter notebook --generate-config
-RUN echo "c.NotebookApp.password = u'sha1:fe7122007c8c:ef4044dd1aa0a0d8adec1cceb686858fff925332'" >> /root/.jupyter/jupyter_notebook_config.py
+RUN echo "c.NotebookApp.password = ''" >> /root/.jupyter/jupyter_notebook_config.py
 RUN echo "c.NotebookApp.ip = '0.0.0.0'" >> /root/.jupyter/jupyter_notebook_config.py
 RUN echo "c.NotebookApp.notebook_dir = '/home/Spellbook'" >> /root/.jupyter/jupyter_notebook_config.py
 RUN echo "c.NotebookApp.allow_root = True" >> /root/.jupyter/jupyter_notebook_config.py
@@ -39,44 +37,4 @@ RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y zsh
 RUN usermod -s $(which zsh) root
 
-# oh-my-zsh
-RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh || true
-RUN git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-# apply powerlevel10k
-#RUN sed -i 's/robbyrussell/powerlevel10k\/powerlevel10k/1' ~/.zshrc
-RUN git clone https://github.com/romkatv/powerlevel10k.git ~/powerlevel10k
-RUN echo "source ~/powerlevel10k/powerlevel10k.zsh-theme" >> ~/.zshrc
-RUN echo "[[ ! -f /home/Spellbook/pose_from_image/docker/p10k.zsh ]] || source /home/Spellbook/pose_from_image/docker/p10k.zsh" >> ~/.zshrc
-# NOTE: ensure carriage return is removed
-WORKDIR /home/Spellbook/pose_from_image
-RUN apt-get install -y dos2unix
-RUN find . -name "*.zsh" | xargs dos2unix
-
 CMD ["zsh"]
-
-# dependencies
-RUN pip3 install yacs plotly PyQt5
-RUN ln -snf /usr/share/zoneinfo/$CONTAINER_TIMEZONE /etc/localtime && echo $CONTAINER_TIMEZONE > /etc/timezone
-RUN apt-get install ffmpeg libsm6 libxext6 -y
-
-# mmcv-full
-RUN echo "export VERSION_CUDA=$(nvcc --version | sed -n 's/^.*release \([0-9]\+\.[0-9]\+\).*$/\1/p' | tr -d '.')" >> ~/.zshrc
-RUN echo "export VERSION_CUDA_MMCV=$VERSION_CUDA" >> ~/.zshrc
-RUN echo "export VERSION_TORCH_MMCV=$(python -c 'import torch; print(torch.__version__)' | sed -n 's/^\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')" >> ~/.zshrc
-
-#RUN MMCV_WITH_OPS=1 FORCE_CUDA=1 pip3 install mmcv-full==1.5.0 -f https://download.openmmlab.com/mmcv/dist/cu${VERSION_CUDA_MMCV}/torch${VERSION_TORCH_MMCV}/index.html
-RUN MMCV_WITH_OPS=1 FORCE_CUDA=1 pip3 install mmcv-full==1.5.0 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.11.0/index.html
-
-# mmdet for pose lifting
-RUN pip3 install mmdet
-
-# mmpose
-WORKDIR /home/
-RUN git clone https://github.com/open-mmlab/mmpose.git
-WORKDIR /home/mmpose/
-RUN git checkout tags/v0.25.1
-RUN pip3 install -r requirements.txt
-RUN pip3 install -v -e .
-
-# finalize
-WORKDIR /home/Spellbook/pose_from_image
